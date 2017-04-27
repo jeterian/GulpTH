@@ -8,10 +8,9 @@ var gulp = require('gulp'),
 	sass = require('gulp-sass'),
 	maps = require('gulp-sourcemaps'),
 	del = require('del'),
-	image = require('gulp-imagemin'),
-	eslint = require('gulp-eslint');
-	jpeg = require('imagemin-jpegtran');
-	png = require('imagemin-pngquant');
+	imagemin = require('gulp-imagemin'),
+	sync = require('browser-sync'),
+	livereload = require('gulp-livereload');
 
 var options = {
 	src: 'src',
@@ -24,14 +23,10 @@ gulp.task('scripts', function() {
 	return gulp.src(['js/**/*.js'])
 		.pipe(concat('all.min.js'))
 		.pipe(uglify())
-		.pipe(eslint())
 		.pipe(maps.init())
 		.pipe(maps.write('.'))
 		.pipe(gulp.dest('dist/scripts'))
-		.pipe(eslint.format())
-		.pipe(eslint.failAfterError());
 });
-
 
 // Styles - compile SCSS to CSS, concatenate & minify & copy, 
 // generate source maps
@@ -45,13 +40,10 @@ gulp.task('styles', function() {
 });
 
 // Images - optimze the size of JPEGs and PNGs, copy
-gulp.task('images', function() {
-	return gulp.src(['images/*.*'])
-	.pipe(imagemin({
-		progressive: true,
-		use: [jpeg(),png()]
-	}))
-	.pipe(gulp.dest('dist/content'));
+gulp.task('images', function () {
+  return gulp.src(['images/*','images/*/*'])
+    .pipe(imagemin())
+    .pipe(gulp.dest('dist/content'));
 });
 
 // Clean - delete all files/folders in Dist folder
@@ -66,15 +58,23 @@ gulp.task('organize', function() {
 });
 
 gulp.task('build', ['clean'], function() {
-	return gulp.start('scripts', 'styles', 'images', 'organize';)
+	return gulp.start('scripts', 'styles', 'organize');
 });
 
 // Default - runs build
-gulp.task('default', ['build'];
+gulp.task('default', ['build']);
 
 // Serve - build and serves project using local web server
 gulp.task('serve', function() {
-
+	sync({
+		server: {
+			baseDir: 'dist'
+		}
+	});
 });
 
 // Watch - scripts runs, current page reloaded in browser if change to JS
+gulp.task('watch', function () {
+  livereload.listen();
+  gulp.watch(['js/*/*.js','js/*.js'],['scripts']);
+});
