@@ -40,12 +40,11 @@ gulp.task('styles', function() {
 });
 
 // Images - optimze the size of JPEGs and PNGs, copy
-gulp.task('images', function () {
-  return gulp.src(['images/*','images/*/*'])
+gulp.task('images', function(){
+    return gulp.src('./images/*.{jpg,png}')
     .pipe(imagemin())
-    .pipe(gulp.dest('dist/content'));
+    .pipe(gulp.dest('./dist/content/'))
 });
-
 // Clean - delete all files/folders in Dist folder
 gulp.task('clean', function() {
 	return del('dist');
@@ -65,7 +64,7 @@ gulp.task('build', ['clean'], function() {
 gulp.task('default', ['build']);
 
 // Serve - build and serves project using local web server
-gulp.task('serve', function() {
+gulp.task('serve', ['build'], function() {
 	sync({
 		server: {
 			baseDir: 'dist'
