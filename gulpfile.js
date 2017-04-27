@@ -9,10 +9,19 @@ var gulp = require('gulp'),
 	maps = require('gulp-sourcemaps'),
 	del = require('del');
 
+var options = {
+	src: 'src',
+	dist: 'dist',
+	dep: 'dep'
+}
+
 //Scripts - concatenate, minify & copy JS files, generate source maps
 gulp.task('scripts', function() {
 
+
 });
+
+
 
 // Styles - compile SCSS to CSS, concatenate & minify & copy, 
 // generate source maps
