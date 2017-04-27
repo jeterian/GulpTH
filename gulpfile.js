@@ -7,7 +7,11 @@ var gulp = require('gulp'),
 	rename = require('gulp-rename'),
 	sass = require('gulp-sass'),
 	maps = require('gulp-sourcemaps'),
-	del = require('del');
+	del = require('del'),
+	image = require('gulp-imagemin'),
+	eslint = require('gulp-eslint');
+	jpeg = require('imagemin-jpegtran');
+	png = require('imagemin-pngquant');
 
 var options = {
 	src: 'src',
@@ -17,37 +21,56 @@ var options = {
 
 //Scripts - concatenate, minify & copy JS files, generate source maps
 gulp.task('scripts', function() {
-
-
+	return gulp.src(['js/**/*.js'])
+		.pipe(concat('all.min.js'))
+		.pipe(uglify())
+		.pipe(eslint())
+		.pipe(maps.init())
+		.pipe(maps.write('.'))
+		.pipe(gulp.dest('dist/scripts'))
+		.pipe(eslint.format())
+		.pipe(eslint.failAfterError());
 });
-
 
 
 // Styles - compile SCSS to CSS, concatenate & minify & copy, 
 // generate source maps
 gulp.task('styles', function() {
-
+	return gulp.src('sass/global.scss')
+	.pipe(sass({outputStyle: 'compressed'}))
+	.pipe(rename('all.min.css'))
+	.pipe(maps.init())
+	.pipe(maps.write('.'))
+	.pipe(gulp.dest('dist/styles'));
 });
 
 // Images - optimze the size of JPEGs and PNGs, copy
 gulp.task('images', function() {
-
+	return gulp.src(['images/*.*'])
+	.pipe(imagemin({
+		progressive: true,
+		use: [jpeg(),png()]
+	}))
+	.pipe(gulp.dest('dist/content'));
 });
 
 // Clean - delete all files/folders in Dist folder
 gulp.task('clean', function() {
-
+	return del('dist');
 });
 
 // Build - runs clean, scripts, styles & images (clean first)
-gulp.task('build', function() {
+gulp.task('organize', function() {
+	gulp.src(['index.html', 'icons/**'], {base: '.'})
+		.pipe(gulp.dest('dist'));
+});
 
+gulp.task('build', ['clean'], function() {
+	return gulp.start('scripts', 'styles', 'images', 'organize';)
 });
 
 // Default - runs build
-gulp.task('default', function() {
-
-});
+gulp.task('default', ['build'];
 
 // Serve - build and serves project using local web server
 gulp.task('serve', function() {
