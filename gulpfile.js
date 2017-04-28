@@ -57,7 +57,7 @@ gulp.task('organize', function() {
 });
 
 gulp.task('build', ['clean'], function() {
-	return gulp.start('scripts', 'styles', 'organize');
+	return gulp.start('scripts', 'styles', 'images', 'organize');
 });
 
 // Default - runs build
