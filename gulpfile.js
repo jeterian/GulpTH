@@ -43,7 +43,9 @@ gulp.task('styles', ['compile'], function() {
 // Images - optimize size of JPGs and PNGs
 gulp.task('images', ['styles'], function() {
 	gulp.src('images/*')
-	.pipe(imagemin())
+	.pipe(imagemin().on('error', function(e) {
+		console.log(e);
+	}))
 	.pipe(gulp.dest('dist/content'));
 });
 
