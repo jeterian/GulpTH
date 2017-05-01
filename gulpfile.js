@@ -1,79 +1,139 @@
 'use strict';
 
-// Variables/Dependencies
-var gulp = require('gulp'),
-	concat = require('gulp-concat'),
-	uglify = require('gulp-uglify'),
-	rename = require('gulp-rename'),
-	sass = require('gulp-sass'),
-	maps = require('gulp-sourcemaps'),
-	del = require('del'),
-	imagemin = require('gulp-imagemin'),
-	sync = require('browser-sync'),
-	livereload = require('gulp-livereload');
+// Load node modules/plugins
+   var gulp = require('gulp'),
+     concat = require('gulp-concat'),
+     eslint = require('gulp-eslint'),
+     uglify = require('gulp-uglify'),
+  uglifycss = require('gulp-uglifycss'),
+     rename = require('gulp-rename'),
+       sass = require('gulp-sass'),
+   imagemin = require('gulp-imagemin'),
+       maps = require('gulp-sourcemaps'),
+        del = require('del'),
+browserSync = require('browser-sync').create();
 
-var options = {
-	src: 'src',
-	dist: 'dist',
-	dep: 'dep'
-}
 
-//Scripts - concatenate, minify & copy JS files, generate source maps
-gulp.task('scripts', function() {
-	return gulp.src(['js/**/*.js'])
-		.pipe(concat('all.min.js'))
-		.pipe(uglify())
-		.pipe(maps.init())
-		.pipe(maps.write('.'))
-		.pipe(gulp.dest('dist/scripts'))
+// Lint task
+gulp.task('lintScripts', function(){
+ return gulp.src(['app/js/global.js', 'app/js/circle/*.js'])
+  // This will lint the scripts
+   .pipe(eslint())
+   // Then output any warnings/errors to console
+   .pipe(eslint.format())
+   // And halt the build process if there's an error
+   .pipe(eslint.failAfterError());
 });
 
-// Styles - compile SCSS to CSS, concatenate & minify & copy, 
-// generate source maps
-gulp.task('styles', function() {
-	return gulp.src('sass/global.scss')
-	.pipe(sass({outputStyle: 'compressed'}))
-	.pipe(rename('all.min.css'))
-	.pipe(maps.init())
-	.pipe(maps.write('.'))
-	.pipe(gulp.dest('dist/styles'));
+// Concatenate scripts task
+gulp.task('concatScripts', ['lintScripts'], function(){
+  return gulp.src(['app/js/global.js', 'app/js/circle/*.js'])
+    // Generate source maps for JS files
+    .pipe(maps.init())
+    // Concatenate JS files into file named all.js
+    .pipe(concat('all.js'))
+    .pipe(maps.write('./'))
+    // Pipe result to the js/all folder
+    .pipe(gulp.dest('app/js/all'))
+    // Reload browser with updated JS
+    .pipe(browserSync.reload({
+      stream: true
+    }));
 });
 
-// Images - optimze the size of JPEGs and PNGs, copy
+// Scripts task
+gulp.task('scripts', ['concatScripts'], function(){
+  return gulp.src('app/js/all/all.js')
+    // Take all.js file created in concatScripts and minify it
+    .pipe(uglify())
+    // Then rename resulting file all.min.js
+    .pipe(rename('all.min.js'))
+    // Copy it to js/all
+    .pipe(gulp.dest('app/js/all'))
+    // And also copy it to dist/scripts
+    .pipe(gulp.dest('dist/scripts'))
+});
+
+// Compile sass task
+gulp.task('compileSass', function(){
+  return gulp.src(['app/sass/global.scss'])
+    // Generate source maps for the SCSS files
+    .pipe(maps.init())
+    // Compile those files into CSS
+    .pipe(sass())
+    // Name the resulting file all.css
+    .pipe(rename('all.css'))
+    // Write source maps
+    .pipe(maps.write('./'))
+    // Save the result to css folder
+    .pipe(gulp.dest('app/css'))
+    // Use browser-sync to inject new CSS styles into the browser
+    .pipe(browserSync.reload({
+      stream: true
+    }));
+});
+
+// Styles task
+gulp.task('styles', ['compileSass'], function(){
+  return gulp.src(['app/css/all.css'])
+    // Minify the CSS
+    .pipe(uglifycss())
+    // Rename as all.min.css
+    .pipe(rename('all.min.css'))
+    // Copy result to css folder
+    .pipe(gulp.dest('app/css'))
+    // The result is copied to the dist/styles folder
+    .pipe(gulp.dest('dist/styles'))
+});
+
+// Optimize images task
 gulp.task('images', function(){
-    return gulp.src('./images/*.{jpg,png}')
+  return gulp.src('app/images/*')
+    // Optimize JPEG and PNG images
     .pipe(imagemin())
-    .pipe(gulp.dest('./dist/content/'))
-});
-// Clean - delete all files/folders in Dist folder
-gulp.task('clean', function() {
-	return del('dist');
+    // Copies them to dist/content
+    .pipe(gulp.dest('dist/content'));
 });
 
-// Build - runs clean, scripts, styles & images (clean first)
-gulp.task('organize', function() {
-	gulp.src(['index.html', 'icons/**'], {base: '.'})
-		.pipe(gulp.dest('dist'));
+// Clean task
+// Deletes all files and folders in the dist folder
+// It also deletes the js/all and css folders
+gulp.task('clean', function(){
+  return del(['dist', 'app/js/all', 'app/css']);
 });
 
-gulp.task('build', ['clean'], function() {
-	return gulp.start('scripts', 'styles', 'images', 'organize');
+// Build task
+// Runs clean, scripts, styles and images tasks
+// But clean must complete first, so it is a dependency and the other tasks run in the callback
+gulp.task('build', ['clean'], function(){
+  gulp.start(['scripts', 'styles', 'images']);
+  // This task also moves index.html and icon files to the dist folder
+  return gulp.src(['app/index.html', 'app/icons/**'], {base: './app'})
+    .pipe(gulp.dest('dist'));
 });
 
-// Default - runs build
-gulp.task('default', ['build']);
-
-// Serve - build and serves project using local web server
-gulp.task('serve', ['build'], function() {
-	sync({
-		server: {
-			baseDir: 'dist'
-		}
-	});
+// Default task
+// This makes 'build' the default task so it runs when 'gulp' is run from the command line
+gulp.task('default', function(){
+  gulp.start('build');
 });
 
-// Watch - scripts runs, current page reloaded in browser if change to JS
-gulp.task('watch', function () {
-  livereload.listen();
-  gulp.watch(['js/*/*.js','js/*.js'],['scripts']);
+// Serve task
+// Running 'gulp serve' from command line will build and serve project using a local web server
+gulp.task('serve', ['build'], function(){
+  browserSync.init({
+    server: {
+      baseDir: 'dist'
+    }
+  })
+  // It will also start the watch task, which in turn will reload browser when changes are made to JS and SCSS files
+  return gulp.start('watch');
+});
+
+// Watch task
+gulp.task('watch', function(){
+  // Run scripts when JS files are updated
+  gulp.watch(['app/js/global.js', 'app/js/circle/*.js'], ['scripts']);
+  // Run styles task when SCSS or SASS files are updated
+  gulp.watch(['app/sass/*.scss', 'app/sass/**/*.sass', 'app/sass/**/**/*.sass'], ['styles']);
 });
